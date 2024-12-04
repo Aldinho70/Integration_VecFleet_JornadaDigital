@@ -1,23 +1,28 @@
-import getInfoDevices from './src/api/wialon.js'
-import { destructWialon } from './src/utils/utils.js'
-import TcpClient from './src/tcp/Wialon_IPS.js';
+import getInfoDevices from './src/api/wialon.js';
+import { destructWialon } from './src/utils/utils.js';
 
+import axios from 'axios'
 const app = () => {
-    getInfoDevices()
-      .then((data) => {
-        return destructWialon( data );  
+  getInfoDevices()
+    .then((data) => {
+      return destructWialon(data);
+    })
+    .then((devices) => {
+      devices.map(device => {
+        const { name, URL } = device;
+
+        axios.get(URL)
+          .then(response => {
+            console.log(`%c${name}: Enviado con exito!`, "color:red;background:yellow;font-size:26px")
+          })
+          .catch(error => {
+            console.error(error);
+          });
       })
-      .then((devices) => {
-        devices.map( _device => {
-          const { login, fulldata } = _device;
-          console.log( login, fulldata );
-          const tcpClient = new TcpClient(login, fulldata);
-          tcpClient.connect();
-        });
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+    })
+    .catch((error) => {
+      console.error(error);
+    });
 };
 
 app();

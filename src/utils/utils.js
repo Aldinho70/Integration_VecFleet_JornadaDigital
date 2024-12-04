@@ -20,57 +20,33 @@ export function decimalToDMSLong(decimal) {
     return `${formattedDegrees}${formattedMinutes}`;
 }
 
-// export function parseDateTime(dateString) {
-//     // Verificar si la fecha es válida
-//     if (!dateString) return { Date: "NA", Time: "NA" };
-
-//     try {
-//         // Convertir la cadena a objeto de fecha en UTC
-//         const date = new Date(dateString);
-//         if (isNaN(date.getTime())) return { Date: "NA", Time: "NA" };
-
-//         // Formatear la fecha en DDMMYY
-//         const day = String(date.getUTCDate()).padStart(2, '0');
-//         const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-//         const year = String(date.getUTCFullYear()).slice(-2);
-
-//         // Formatear la hora en HHMMSS
-//         const hours = String(date.getUTCHours()).padStart(2, '0');
-//         const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-//         const seconds = String(date.getUTCSeconds()).padStart(2, '0');
-
-//         return  (`${day}${month}${year};${hours}${minutes}${seconds}`)
-//     } catch (error) {
-//         // En caso de error, retornar "NA"
-//         return  (`NA;NA`);
-//     }
-// }
-
 export function parseDateTime(timestamp) {
     // Verificar si el timestamp es válido
-    if (!timestamp) return { Date: "NA", Time: "NA" };
+    if (!timestamp) return "NA";
 
     try {
-        // Convertir el timestamp a objeto Date en UTC
-        const date = new Date(timestamp * 1000);  // Multiplicamos por 1000 para convertir a milisegundos
-        if (isNaN(date.getTime())) return { Date: "NA", Time: "NA" };
+        // Convertir el timestamp a un objeto Date en UTC
+        const date = new Date(timestamp * 1000); // Multiplicamos por 1000 para convertir a milisegundos
+        if (isNaN(date.getTime())) return "NA";
 
-        // Formatear la fecha en DDMMYY
-        const day = String(date.getUTCDate()).padStart(2, '0');
+        // Formatear la fecha en YYYY-MM-DD
+        const year = date.getUTCFullYear();
         const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-        const year = String(date.getUTCFullYear()).slice(-2);
+        const day = String(date.getUTCDate()).padStart(2, '0');
 
-        // Formatear la hora en HHMMSS
+        // Formatear la hora en HH:MM:SS
         const hours = String(date.getUTCHours()).padStart(2, '0');
         const minutes = String(date.getUTCMinutes()).padStart(2, '0');
         const seconds = String(date.getUTCSeconds()).padStart(2, '0');
 
-        return `${day}${month}${year};${hours}${minutes}${seconds}`;
+        // Retornar el formato final
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     } catch (error) {
         // En caso de error, retornar "NA"
-        return 'NA;NA';
+        return "NA";
     }
 }
+
 
 /**
  * Desestrucuturar las respuesta de getInfoDevice
@@ -82,13 +58,12 @@ export const destructWialon = (data) => {
     const REGEX_IGNITION = /(I(GN|GN|N)?(I|IN)?(CI)?(Ó|O)N?)/i;
     
     const { nm, id, pos, prms, netconn, lmsg, sens  } = element;
-    const { y, x, s, t } = pos;
+    const { y, x, s, t, c, z } = pos;
     const { p } = lmsg;
     const { pwr_ext } = p;
-    const lat = decimalToDMS( y );
-    const lon = decimalToDMSLong( x );
     const time = parseDateTime(t); 
     let params_sens_ignition;
+    let params_sens_batery_backup;
     
     Object.values(sens).forEach((sens) => {
         const { n, p } = sens; 
@@ -97,20 +72,39 @@ export const destructWialon = (data) => {
         }
     });
 
-    const ignition = prms[params_sens_ignition].v;
+    Object.values(sens).forEach((sens) => {
+        const { n, p } = sens; 
+        if ( n == 'BATERIA INTERNA') {
+            params_sens_batery_backup = p;
+        }
+    });
+
+    const ignition = prms[params_sens_ignition]?.v ?? 0;
+    const batery_backup = prms[params_sens_batery_backup]?.v ?? 0;
+    const odometro = prms['mileage']?.v ?? 0; 
+    const SOS = prms['input1']?.v ?? 0;  
 
     deviceInfoList.push ({ 
         name: nm,
-        device_id: id,
         timestamp: t,
-        latatitude: x,
-        longitude: y,
+        device_id: id,
+        dt: time,
+        lat: x,
+        lng: y,
+        altitude: z,
+        angle: c,
         speed : s,
-        ignicion: ignition,
-        power_ext : pwr_ext,
-        network_connection: netconn,
-        login: `#L#${id};NA`,
-        fulldata: `#D#${time};${lat};N;${lon};W;${s};0;0;21;NA;NA;NA;NA;NA;ignition:1:${ignition},network_connection:1:${netconn}`,
+        loc_valid : netconn,
+        /* Parametros adicionales */
+            acc: ignition,
+            accv : pwr_ext ?? 0,
+            batp: batery_backup,
+            odo: odometro,
+            gsmlev: 100,
+
+        /* Eventos */
+            SOS: SOS,
+            URL: ` https://gps.undercontrolsa.com/api/api_loc.php?imei=${id}&dt=${time}&lat=${x}&lng=${y}&altitude=${z}&angle=${c}&speed=${s}&loc_valid=${netconn}&params=batp=${batery_backup}|acc=${ignition}|accv=${pwr_ext ?? 0}|odo=${odometro}|gsmlev=${100}|&event=ok`
     });
   });
   return deviceInfoList;  
