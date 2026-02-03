@@ -16,8 +16,8 @@ async function authenticate() {
             }
         });
         const { eid } = response.data;
-        if (!eid) throw new Error('Error de autenticación');
-        console.log('Autenticación exitosa');
+        if (!eid) throw new Error('Error de autenticación con Wialon');
+        console.log('Autenticación exitosa con Wialon');
         return eid; // Se retorna el eid (ID de sesión) para las siguientes peticiones
     } catch (error) {
         console.log(`Error en la autenticación: ${error.message}`);

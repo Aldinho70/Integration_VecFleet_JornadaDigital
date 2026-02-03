@@ -55,56 +55,26 @@ export function parseDateTime(timestamp) {
 export const destructWialon = (data) => {
   const deviceInfoList = [];
   data.map( element => {
-    const REGEX_IGNITION = /(I(GN|GN|N)?(I|IN)?(CI)?(Ó|O)N?)/i;
     
-    const { nm, id, pos, prms, netconn, lmsg, sens  } = element;
+    const { nm, id, pos, prms, netconn, lmsg, sens, uid  } = element;
     const { y, x, s, t, c, z } = pos;
     const { p } = lmsg;
-    const { pwr_ext } = p;
     const time = parseDateTime(t); 
-    let params_sens_ignition;
-    let params_sens_batery_backup;
-    
-    Object.values(sens).forEach((sens) => {
-        const { n, p } = sens; 
-        if ( REGEX_IGNITION.test(n) || n == 'IGN') {
-            params_sens_ignition = p;
-        }
-    });
-
-    Object.values(sens).forEach((sens) => {
-        const { n, p } = sens; 
-        if ( n == 'BATERIA INTERNA') {
-            params_sens_batery_backup = p;
-        }
-    });
-
-    const ignition = prms[params_sens_ignition]?.v ?? 0;
-    const batery_backup = prms[params_sens_batery_backup]?.v ?? 0;
     const odometro = prms['mileage']?.v ?? 0; 
-    const SOS = prms['input1']?.v ?? 0;  
 
     deviceInfoList.push ({ 
+        imei: uid,
         name: nm,
-        timestamp: t,
-        device_id: id,
-        dt: time,
+        plate: "",
+        date: time,
         lat: x,
-        lng: y,
-        altitude: z,
-        angle: c,
+        lon: y,
         speed : s,
-        loc_valid : netconn,
-        /* Parametros adicionales */
-            acc: ignition,
-            accv : pwr_ext ?? 0,
-            batp: batery_backup,
-            odo: odometro,
-            gsmlev: 100,
-
-        /* Eventos */
-            SOS: SOS,
-            URL: ` https://gps.undercontrolsa.com/api/api_loc.php?imei=${id}&dt=${time}&lat=${x}&lng=${y}&altitude=${z}&angle=${c}&speed=${s}&loc_valid=${netconn}&params=batp=${batery_backup}|acc=${ignition}|accv=${pwr_ext ?? 0}|odo=${odometro}|gsmlev=${100}|&event=ok`
+        odometer: odometro,
+        direction: 0,
+        rpm: 0,
+        temperature: 0,
+        fuel: 0
     });
   });
   return deviceInfoList;  
