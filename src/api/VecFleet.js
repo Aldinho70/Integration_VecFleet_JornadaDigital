@@ -1,5 +1,7 @@
-// services/GpsService.js
+// api/VecFleet.js
+
 import axios from 'axios';
+import { readSession, writeSession } from '../helpers/sessionManager.js';
 
 const BASE_URL_VEC_FLEET = process.env.BASE_URL_VEC_FLEET;  
 const TOKEN_VEC_FLEET = process.env.TOKEN_VEC_FLEET;
@@ -28,41 +30,59 @@ export class API_VecFleet {
             return response;
             
         } catch (error) {
+            if( error.status == 401 ){
+                console.log('Actualizando Token');
 
-            throw this._handleError(error);
+                const responseLogin = await this.getToken();
+                if( responseLogin ){
+                    this.client.defaults.headers.Authorization = `Bearer ${ responseLogin }`;
+                    writeSession({
+                        token: responseLogin,
+                        generatedAt: Date.now()
+                    });
+                }else{
+                    console.log('No fue posible generar token');
+                    
+                    writeSession({
+                        token: "Error_token",
+                        generatedAt: Date.now()
+                    });
+                }
+
+            }
         }
     }
 
     async getToken() {
         try {
-            const response = await this.client.post('https://api.staging.vecfleet.io/auth/login', {
-                data: {
+            const response = await axios.post('https://api.staging.vecfleet.io/auth/login', {
                         "email": "gafi-test@vecfleet.io",
                         "password": "G4T3s-er56Gn7J"
-                    }
             });
-            return response;
+            
+            if( response.status == 200 ){
+                return response.data;
+            }
             
         } catch (error) {
-
-            throw this._handleError(error);
+            console.log(error);
+            
+            // throw  this._handleError(error);
         }
     }
 
     /**
      * 🔧 Segundo método (placeholder)
      * async otroMetodo(payload) {
-     *     return await this.client.post('/gps/otro-endpoint', payload);
+     *     return await this.client.post('/gps/otro-endpoint', payload);     
      * }
      */
 
-    _handleError(error) {
-        console.log(error);
-        
-        // return {
-        //     message: 'Error en petición GPS',
-        //     status: error.response?.status,
-        //     data: error.response?.data
-        // };
-    }
+    // async _handleError(error) {
+    //     if( error.status == 401 ){
+    //         console.log('Token invalido o usuario incorrecto.');
+    //         const reponseLogin = await this.getToken();
+    //         return reponseLogin
+    //     }
+    // }
 }
