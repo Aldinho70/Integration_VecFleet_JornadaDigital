@@ -56,16 +56,28 @@ export const destructWialon = (data) => {
   const deviceInfoList = [];
   data.map( element => {
     
-    const { nm, id, pos, prms, netconn, lmsg, sens, uid  } = element;
+    const { nm, id, pos, prms, netconn, lmsg, sens, uid, flds  } = element;
     const { y, x, s, t, c, z } = pos;
     const { p } = lmsg;
     const time = parseDateTime(t); 
     const odometro = prms['mileage']?.v ?? 0; 
+    let plate;
+
+    /**
+     * Obtener el valor del campo personalizado 'plate'
+     */
+        for (const key in flds) {
+            if (!Object.hasOwn(flds, key)) continue;
+            const fld = flds[key];
+            if( fld.n == "plates" ){
+                plate = fld.v
+            }
+        }
 
     deviceInfoList.push ({ 
         imei: uid,
         name: nm,
-        plate: "",
+        plate: plate,
         date: time,
         lat: x,
         lon: y,

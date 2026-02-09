@@ -4,8 +4,8 @@ import axios from 'axios';
 dotenv.config();
 
 // Variables de configuración
-const BASE_URL = process.env.BASE_URL;  /*'https://hst-api.wialon.com/wialon/ajax.html';*/
-const TOKEN = process.env.TOKEN;        /*'75d411452da4001e15a7523b47bbe071741204643F8F56F2E2BA1C050C9F301BCD84731D'; */
+const BASE_URL = process.env.BASE_URL;  
+const TOKEN = process.env.TOKEN;        
 
 async function authenticate() {
     try {
