@@ -11,7 +11,10 @@ const app = async () => {
     const devices = destructWialon(data);
 
     const response = await ApiVecFleet.sendAvl(devices);
+    // console.log(devices);
+    // console.log(JSON.stringify(devices));
 
+    
     if( response.status === 200 ){
       console.log(`Response Ok, [Code]:200 in URL[${response.config.url}]`);
       // console.log(response.data);

@@ -52,42 +52,148 @@ export function parseDateTime(timestamp) {
  * Desestrucuturar las respuesta de getInfoDevice
  */
 
-export const destructWialon = (data) => {
-  const deviceInfoList = [];
-  data.map( element => {
-    
-    const { nm, id, pos, prms, netconn, lmsg, sens, uid, flds  } = element;
-    const { y, x, s, t, c, z } = pos;
-    const { p } = lmsg;
-    const time = parseDateTime(t); 
-    const odometro = prms['mileage']?.v ?? 0; 
-    let plate;
+// export const destructWialon = (data) => {
+//     try {
+//         const deviceInfoList = [];
+//         data.map(element => {
 
-    /**
-     * Obtener el valor del campo personalizado 'plate'
-     */
-        for (const key in flds) {
-            if (!Object.hasOwn(flds, key)) continue;
-            const fld = flds[key];
-            if( fld.n == "plates" ){
-                plate = fld.v
+//             const name_sens = ["VecFleet_Odo", "VecFleet_Fuel", "VecFleet_RPM"];
+//             let odometer = 0, fuel = 0, RPM = 0;
+//             const { nm, pos, prms, sens, uid, flds } = element;
+//             const { y, x, s, t } = pos;
+//             const time = parseDateTime(t);
+//             let plate;
+
+//             /**
+//              * Obtener el valor del campo personalizado 'plate'
+//              */
+//                 for (const key in flds) {
+//                     if (!Object.hasOwn(flds, key)) continue;
+//                     const fld = flds[key];
+//                     if (fld.n == "plates") {
+//                         plate = fld.v
+//                     }
+//                 }
+
+//             /**
+//              * Obtener los valores de RPM, Fuel y Odometro
+//              */
+//                 for (const key in sens) {
+//                     if (!Object.hasOwn(sens, key)) continue;
+
+//                     const sen = sens[key];
+//                     if (name_sens.includes(sen.n)) {
+//                         switch (sen.n) {
+
+//                             case 'VecFleet_Odo': {
+//                                 odometer = prms['can_distance']?.v ?? 0;
+//                                 break;
+//                             }
+
+//                             case 'VecFleet_Fuel': {
+//                                 fuel = prms[sen.p]?.v ?? 0;
+//                                 break;
+//                             }
+
+//                             case 'VecFleet_RPM': {
+//                                 RPM = prms[sen.p]?.v ?? 0;
+//                                 break;
+//                             }
+
+//                             default: {
+//                                 return
+//                             }
+//                         }
+//                     }
+//                 }
+
+//             deviceInfoList.push({
+//                 imei: uid,
+//                 name: nm,
+//                 plate: plate,
+//                 date: time,
+//                 lat: x,
+//                 lon: y,
+//                 speed: s,
+//                 odometer: odometer,
+//                 direction: 0,
+//                 rpm: RPM,
+//                 temperature: 0,
+//                 fuel: fuel
+//             });
+//         });
+
+//         return deviceInfoList;
+//     } catch (error) {
+//         console.log(error);
+//     }
+// }
+
+const SENSORS = {
+    ODO: 'VecFleet_Odo',
+    FUEL: 'VecFleet_Fuel',
+    RPM: 'VecFleet_RPM'
+};
+
+const CAN_DISTANCE_FACTOR = 0.005;
+
+const getPlate = (flds = {}) =>
+    Object.values(flds).find(f => f.n === 'plates')?.v;
+
+const getSensorValues = (sens = {}, prms = {}) => {
+    try{
+        let odometro = 0, fuel = 0, rpm = 0;
+
+        for (const sensor of Object.values(sens)) {
+            switch (sensor.n) {
+                case SENSORS.ODO:
+                    odometro = (prms['can_distance']?.v ?? 0);
+                    break;
+                case SENSORS.FUEL:
+                    fuel = prms[sensor.p]?.v ?? 0;
+                    break;
+                case SENSORS.RPM:
+                    rpm = prms[sensor.p]?.v ?? 0;
+                    break;
             }
         }
 
-    deviceInfoList.push ({ 
+        return { odometro, fuel, rpm };
+    }catch ( error ) {
+        console.log(error);
+        
+    }
+};
+
+const mapDevice = (element) => {
+    const { nm, pos = {}, prms, sens, uid, flds } = element;
+    const { x, y, s, t } = pos;
+
+    const { odometro, fuel, rpm } = getSensorValues(sens, prms);
+
+    return {
         imei: uid,
         name: nm,
-        plate: plate,
-        date: time,
+        plate: getPlate(flds),
+        date: parseDateTime(t),
         lat: x,
         lon: y,
-        speed : s,
-        odometer: odometro,
+        speed: s,
+        odometer: Math.round(odometro * CAN_DISTANCE_FACTOR) || 0,
+        // odometer,
         direction: 0,
-        rpm: 0,
+        rpm,
         temperature: 0,
-        fuel: 0
-    });
-  });
-  return deviceInfoList;  
-}
+        fuel
+    };
+};
+
+
+export const destructWialon = (data = []) => {
+    try {
+        return data.map(mapDevice);
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
+};

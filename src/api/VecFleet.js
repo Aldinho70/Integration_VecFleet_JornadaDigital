@@ -70,19 +70,4 @@ export class API_VecFleet {
             // throw  this._handleError(error);
         }
     }
-
-    /**
-     * 🔧 Segundo método (placeholder)
-     * async otroMetodo(payload) {
-     *     return await this.client.post('/gps/otro-endpoint', payload);     
-     * }
-     */
-
-    // async _handleError(error) {
-    //     if( error.status == 401 ){
-    //         console.log('Token invalido o usuario incorrecto.');
-    //         const reponseLogin = await this.getToken();
-    //         return reponseLogin
-    //     }
-    // }
 }
